@@ -42,16 +42,54 @@ def stackImages(scale, imgArray):
 
 def getContours(img):
 
-    contours, hierarchy = cv2.findContours(
+    _, contours, hierarchy = cv2.findContours(
         img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
     for cnt in contours:
         area = cv2.contourArea(cnt)
         print(area)
+        
+        # minimum threshold for area to avoid detecting noise
+        if area > 500:
+            cv2.drawContours(imgContour, cnt, -1, (255,0,0), 3)
+
+            # curve length
+            peri = cv2.arcLength(cnt, True)
+            print(peri)
+
+            # No. of corner points
+            approx = cv2.approxPolyDP(cnt, 0.02*peri, True)
+            print(len(approx))
+
+            # Object detection
+            objCor = len(approx)
+
+            # Draw bounding box
+            x, y, w, h = cv2.boundingRect(approx)
+
+            if objCor == 3:
+                objectType = "Triangle"
+            elif objCor == 4:
+                aspRatio = w/float(h)
+                if aspRatio > 0.98 and aspRatio < 1.03:
+                    objectType = "Square"
+                else:
+                    objectType = "Rectangle"
+            elif objCor > 4:
+                objectType = "Circle"
+            else:
+                objectType = "None"
+
+            cv2.rectangle(imgContour, (x,y), (x+w, y+h), (0,255,0), 2)
+            cv2.putText(imgContour, objectType, 
+                        (x+int(w/2)-10, y+int(h/2)-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                        (0,0,0), 2)
 
 
 
 path = "./resources/shapes.png"
 img = cv2.imread(path)
+imgContour = img.copy()
 
 ## Contours / Shape Detection
 
@@ -66,7 +104,7 @@ imgBlank = np.zeros_like(img)
 getContours(imgCanny)
 
 imgStacked = stackImages(0.6, ([img, imgGray, imgBlur],
-                               [imgCanny, imgBlank, imgBlank]))
+                               [imgCanny, imgContour, imgBlank]))
 
 
 
